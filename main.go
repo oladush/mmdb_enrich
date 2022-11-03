@@ -60,12 +60,10 @@ func insertToTree(CIDR string, cgid, rgid int, tree *mmdbwriter.Tree, db *sql.DB
 
 	c_iso, c_name, err := getFromDB(cgid, db)
 	if err != nil {
-		println(CIDR)
 		return err
 	}
 	r_iso, r_name, err := getFromDB(rgid, db)
 	if err != nil {
-		println(CIDR)
 		return err
 	}
 
@@ -97,7 +95,6 @@ func getFromDB(gid int, db *sql.DB) (string, string, error) {
 	err := db.QueryRow(query, gid).Scan(&iso, &name)
 
 	if err != nil {
-		println(gid)
 		return "", "", err
 	}
 
@@ -106,6 +103,7 @@ func getFromDB(gid int, db *sql.DB) (string, string, error) {
 
 func main() {
 	// vars
+	LOG_FILE := "error.log"
 	var mmdb_in, mmdb_out, country_database, csv_for_patching string
 
 	flag.StringVar(&mmdb_in, "i", "GeoLite2-City.mmdb", "Input mmdb database")
@@ -114,6 +112,16 @@ func main() {
 	flag.StringVar(&csv_for_patching, "csv", "GeoLite2-Country-Blocks-IPv4.csv", "Subnets for patching")
 
 	flag.Parse()
+
+	// Logs
+	logFile, err := os.OpenFile(LOG_FILE, os.O_APPEND|os.O_RDWR|os.O_CREATE, 0644)
+	if err != nil {
+		log.Panic(err)
+		return
+	}
+	defer logFile.Close()
+	log.SetOutput(logFile)
+	log.SetFlags(log.Lshortfile | log.LstdFlags)
 
 	// Load mmdb for enrich
 	println("Loading mmdb DataBase..")
@@ -146,7 +154,7 @@ func main() {
 
 		err := insertToTree(lines[i][0], cgid, rgid, writer, db)
 		if err != nil {
-			println("Error")
+			log.Println("Error", "cidr: ", lines[i][0], "country:", cgid, "registered country:", rgid)
 		}
 		bar.Add(1)
 	}
